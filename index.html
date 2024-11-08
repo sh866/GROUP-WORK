@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>Emotion-based Spotify Player</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        /* 기본 스타일 */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #121212;
+            color: #ffffff;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* 헤더 스타일 */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            padding: 10px;
+            background-color: #333333;
+        }
+
+        .header input[type="text"] {
+            width: 300px;
+            padding: 8px;
+            border-radius: 20px;
+            border: none;
+            outline: none;
+            background-color: #444444;
+            color: #ffffff;
+            margin-right: 10px;
+        }
+
+        .header button {
+            padding: 8px 16px;
+            border-radius: 20px;
+            border: none;
+            background-color: #1DB954;
+            color: #ffffff;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .header button:hover {
+            background-color: #1aa34a;
+        }
+
+        /* 음악 카드 컨테이너 */
+        #musicContainer {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 20px;
+            width: 80%;
+            margin-top: 20px;
+        }
+
+        /* 음악 카드 스타일 */
+        .track-card {
+            background-color: #333333;
+            border-radius: 10px;
+            overflow: hidden;
+            text-align: center;
+            padding: 15px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .track-card img {
+            width: 100%;
+            height: auto;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+
+        .track-card h3 {
+            font-size: 1.2rem;
+            margin: 5px 0;
+        }
+
+        .track-card p {
+            color: #aaaaaa;
+            font-size: 0.9rem;
+            margin: 5px 0;
+        }
+
+        .track-card a {
+            display: inline-block;
+            margin-top: 10px;
+            color: #1DB954;
+            text-decoration: none;
+        }
+
+        .track-card a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="logo" onclick="goHome()">
+            <img src="/static/APT logo.webp" alt="Logo">
+            <span>e motion</span>
+        </div>
+        <div class="search-bar">
+            <i class="fas fa-search" id="searchIcon"></i>
+            <input type="text" id="searchInput" placeholder="노래 제목을 입력하세요">
+        </div>
+        <div class="auth-buttons" id="authButtons">
+            <a href="/login"><button id="loginBtn" class="auth-button">로그인</button></a>
+            <a href="/signup"><button id="signupBtn" class="auth-button">회원가입</button></a>
+        </div>
+        <div class="auth-buttons" id="logoutButton" style="display: none;">
+            <button class="auth-button" onclick="logout()">로그아웃</button>
+        </div>
+    </div>
+
+    <div id="musicContainer"></div>
+
+    <script>
+        const CLIENT_ID = "97e5dd5d79404fc2a8e8d7d3e9fb94ef";
+        const REDIRECT_URI = "http://localhost:8000/callback";
+        const TOP_100_PLAYLIST_ID = "37i9dQZF1DXcBWIGoYBM5M";
+
+        async function fetchTopTracks() {
+            let token = localStorage.getItem("access_token");
+            if (!token) {
+                window.location.href = `https://accounts.spotify.com/authorize?client_id=${CLIENT_ID}&response_type=token&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&scope=playlist-read-private`;
+                return;
+            }
+
+            const response = await fetch(`https://api.spotify.com/v1/playlists/${TOP_100_PLAYLIST_ID}/tracks`, {
+                headers: { "Authorization": `Bearer ${token}` }
+            });
+
+            const data = await response.json();
+            displayTopTracks(data.items);
+        }
+
+        function displayTopTracks(trackList) {
+            const container = document.getElementById("musicContainer");
+            container.innerHTML = trackList.map(item => `
+                <div class="track-card">
+                    <img src="${item.track.album.images[0]?.url || 'https://via.placeholder.com/150'}" alt="${item.track.name}">
+                    <h3>${item.track.name}</h3>
+                    <p>${item.track.artists.map(artist => artist.name).join(', ')}</p>
+                    <a href="${item.track.external_urls.spotify}" target="_blank">Listen on Spotify</a>
+                </div>
+            `).join('');
+        }
+
+        function goHome() {
+            window.location.href = '/';
+        }
+
+        function logout() {
+            localStorage.removeItem("access_token");
+            updateUI();
+        }
+
+        function updateUI() {
+            const token = localStorage.getItem("access_token");
+            document.getElementById("authButtons").style.display = token ? "none" : "block";
+            document.getElementById("logoutButton").style.display = token ? "block" : "none";
+        }
+
+        document.addEventListener("DOMContentLoaded", () => {
+            updateUI();
+            fetchTopTracks();
+        });
+    </script>
+</body>
+</html>
